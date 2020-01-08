@@ -1,0 +1,191 @@
+Functional Programming
+
+- to begin: FP in general, not a particular language
+
+- need a model - simple
+			   - powerful enough to be useful
+
+Church-Turing Thesis: Any algorithm can be simulated on a Turing machine.
+
+Alan Turing - Turing machine
+  			- not an inspiring model for programming
+
+Alonzo Church - Lambda-calculus
+			  - equivalent to Turing Machines
+			  - the basis for all of functional programming
+
+Untyped lambda-calculus
+
+Calculus - a system or method of calculation
+   		 - syntax + rules for manipulating syntax
+
+lambda-calculus (1934) - "a calculus of functions"
+
+Syntax: - abstract syntax
+
+		   variable, abstraction and application
+<expr> ::= <var> | <abs> | <app>
+
+<var> ::= a | b | c | ...
+
+				variable and body
+<abs> ::= Lambda <var>.<expr>
+
+	       rator and rand
+<app> ::= <expr> <expr>
+
+Use parens to disambiguate parses
+
+Conventions: 1) Abstractions extend as far to the right as possible
+					e.g. Lambda x. y z  = lambda x.(yz) Does not = (lambda x.y) z
+			 2) Applications associate left-to-right
+			 		e.g. x y z = (x y) z
+			 		not = x (y z)
+
+Interpretation - Var: self explanatory
+
+			   - Abs: lambda x.E = "function" taking argument x and returning expr E
+
+			   - App: M N - result of applying "function" M to argument N
+
+Semantics: Two types of vars: Free and bound
+	
+	binding occurence, bound occurrence
+Consider: lambda x.x 
+
+		  lambda x. x y x  the y is a free occurrence    (and fully parenthesized the function is lambda x.((x y) x) )
+
+		  lambda x. x (lambda x.x) x 	same variable name might be bound in different places as long as the scope is not clashing
+
+		  x lambda x.x 				the x in front is free while the other one is bound
+
+		  Informally: A var is bound if it has a bound occurrence
+
+		  			  A var is free if it has a free occurrence
+
+		  			  (the same variable name can be used in both bound and free occurrences)
+
+Formally:
+
+Definition: Let E be an expr. The bound vars of E, B U [E] are given by B U [x] = emptyset
+																		B U [lambda x.E] = B U [E] U {x}
+																		B U [M N] = B U [M] U B U [N]
+							x is bound in E if x \in B U [E]
+
+The free vars of E, F U [E] are given by
+
+F U [x] = {x}
+F U [lambda x.E] = F U [E] \ {x}
+F U [M N] = F U [M] U F U [N]
+
+x is free in E if x \in F U [E]
+
+A var can be both bound and free: F U [x labmda x.x] = B U [x lambda x.x] = {x}
+
+But each occurrence is either bound or free, not both
+
+Two occurrences of a variable x "mean the same thing" if
+
+1) they are both free occurrences
+
+OR 2) they have the same binding occurrence 
+
+lambda x .lambda y. y x   and    lambda a. lambda b. b a  these should mean the same thing
+
+lambda x. y x   and    lambda x. w x   should not mean the same thing because y and w do not have to be the same free variable
+
+Can change the names of bound vars, but not free ones. 
+
+Formally:
+
+Definiation (alpha-conversion): For all x, y, M,  lambda x.M =alpha lambda y.M[y/x]   if y is not in F U [M]
+
+M[N/x] = "substitute N for x in M"
+
+More generally: if C[lambda x.M] denotes an expr in which lambda x.M occurs as a subexpression, 
+		then C[lambda x.M] =alpha C[lambda y.M[y/x]] if y is not in F U [M]
+
+e.g. lambda x.x =alpha lambda y.y
+	 x lambda x.x =alpha x lambda a.a
+	 lambda a.b a =alpha lambda c. b c  =not alpha lambda b.b b =not alpha lambda a.d a
+
+Computation:
+
+Expr.  (lambda x.M) N called a (beta-)redex (reductible expression)
+		((lambda (x) M) N)
+
+We expect: (lambda x.M) N => evaluate M, with N substituted for x   i.e. M[N/x]
+
+Definition (beta-reduction): for all M, N, x,  (lambda x.M) N ->beta M[N/x]
+
+More generally - for all contexts C, C[(lambda x.M) N] ->beta C[M[N/x]]
+
+->beta is a binary relation on terms
+
+A ->beta B: A beta-reduces to B in one step
+
+A ->beta^n B: A beta-reduces to B in n steps
+
+A ->beta^* B: A beta-reduces to B in 0 or more steps
+
+A ->beta^+ B: A beta-reduces to B in 1 or more steps
+
+Evaluating M[N/x]
+
+Want: Substitute N for all free occurrences of x in M
+
+Definition (substitution, naive(wrong)): 
+
+x[E/x] = E
+y[E/x] = y  y not= x
+(M N)[E/x] = M[E/x] N[E/x]
+(lambda x.P)[E/x] = lambda x.P
+(lambda y.P)[E/x] = lambda y.P[E/x]  y not=x
+
+E.g. (lambda x. x y) z ->beta (x y) [z/x] 
+						= x[z/x] y[z/x]
+						= z y
+
+     (lambda x.x) a -> x[a/x] = a
+
+     (lambda x. lambda y. x) a b
+     ->beta (lambda y.x) [a/x] b
+     = (lambda y.x[a/x]) b
+     = (lambda y.a) b
+     ->beta a[b/y]
+     = a
+
+     (lambda x.lambda y.y) a b
+     ->beta (lambda y.y) [a/x] b
+     = (lambda y.y[a/x]) b
+     = (lambda y.y) b
+     ->beta y[b/y]
+     = b
+
+Consider: (lambda x.lambda y.x) y w
+		  ->beta (lambda y.x)[y/x] w
+		  = (lambda y.x[y/x]) w
+		  = (lambda y.y) w
+		  ->beta y[w/y]
+		  = w
+
+So we can see from this that the last rule of (lambda y.P)[E/x] = lambda y.P[E/x]  y not=x must be wrong.
+
+What happened? Free var y became bound after substitution
+
+As a result, the binding occurrence of x changed  
+
+lambda x.lambda y.x   <- the inner x is bound to the lambda x on the outside ---> Dynamic binding - meaning of vars uncertain until runtime
+
+Want static binding - meanings of vars fixed before runtime
+
+Need to "fix" substitution
+
+Definition (substitution, fixed):
+
+x[E/x] = E
+y[E/x] = y  y not= x
+(M N)[E/x] = M[E/x] N[E/x]
+(lambda x.P)[E/x] = lambda x.P
+(lambda y.P)[E/x] = lambda y.P[E/x]  y not in F U [E]
+?? What if y is free?? (thursday)
