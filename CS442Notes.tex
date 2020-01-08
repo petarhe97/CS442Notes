@@ -29,6 +29,218 @@
 {\large\bf CS442 Notes}
 \end{center}
 \bigskip
-\noindent
-\textbf{Functional Programming} \\
+
+\section{Functional Programming}
+
+\begin{itemize}
+\item[-] to begin: Functional Programming in general, not a particular language
+\item[-] need a model \begin{itemize}
+\item[-] simple
+\item[-] powerful enough to be useful
+\end{itemize}
+\end{itemize}
+
+\textbf{Church-Turing Thesis:} Any algorithm can be simulated on a Turing machine. \\
+
+\textbf{Alan Turing}
+\begin{itemize}
+\item[-] Turing machine
+\item[-] not an inspiring model for programming
+\end{itemize}
+
+\textbf{Alonzo Church}
+\begin{itemize}
+\item[-] $\lambda$-calculus
+\item[-] equivalent to Turing Machines
+\item[-] the basis for all of functional programming
+\end{itemize}
+
+\subsection{Untyped Lambda-Calculus}
+
+\textbf{Calculus}
+\begin{itemize}
+\item[-] a system or method of calculation
+\item[-] syntax + rules for manipulating syntax
+\end{itemize}
+\textbf{Lambda-Calculus} (1934) - "a calculus of functions" \\ \\
+\textbf{Syntax}: Abstract Syntax
+\begin{align*}
+& variable, abstraction, application \\
+<expr> &::= <var> | <abs> | <app> \\
+<var> &::= a | b | c \\
+& \text{variable and body} \\
+<abs> &::= \lambda <var>.<expr> \\
+& \text{rator and rand} \\
+<app> &::= <expr> <expr>
+\end{align*}
+
+Use parenthesis to disambiguate parses \\
+
+\textbf{Conventions:}
+\begin{enumerate}
+\item Abstractions extend as far to the right as possible
+	\begin{itemize}
+		\item[e.g.] $\lambda x.y\;z = \lambda x.(y\;z) \neq (\lambda x.y)\;z$
+	\end{itemize}
+\item Applications associate left-to-right
+	\begin{itemize}
+		\item[e.g.] $x\;y\;z = (x\;y)\;z \neq x\;(y\;z)$
+	\end{itemize}
+\end{enumerate}
+
+\textbf{Interpretation}
+	\begin{itemize}
+		\item[-] Var: Self explanatory
+		\item[-] Abs: $\lambda x.E =$ "function" taking argument x and returning expr E
+		\item[-] App: $M\;N$ - result of applying "function" M to argument N
+	\end{itemize}
+
+\textbf{Consider:}
+\begin{itemize}
+\item[] $\lambda x.x$ - Here the first $x$ is a binding occurrence and second $x$ is a bound occurrence.
+\item[] $\lambda x.x\;y\;x$ - The $y$ is a free occurrence (fully parenthesized function is $\lambda x.((x\;y)\;x)$)
+\item[] $\lambda x.x\;(\lambda x.x)\;x$ - Same variable name might be bound in difference places as long as the scope is not clashing
+\item[] $x\;\lambda x.x$ - The $x$ in the front is free while the other one is bound
+\end{itemize}
+
+\textbf{Informally:}
+\begin{itemize}
+\item[] A variable is bound if it has a bound occurrence.
+\item[] A variable is free if it has a free occurrence
+\item[] The same variable can be used in both bound and free occurrences
+\end{itemize}
+
+\textbf{Formally:} \\
+
+\textbf{Definition:} Let E be an expression. The bound variables of E, $B \cup [E]$ are given by 
+\begin{itemize}
+	\item[] $B \cup [x] = \emptyset$
+	\item[] $B \cup [\lambda x.E] = B \cup [E] \cup \{x\}$
+	\item[] $B \cup [M\;N] = B \cup [M] \cup B \cup [N]$
+\end{itemize}
+
+
+$x$ is bound in $E$ if $x \in B \cup [E]$ \\
+
+The free variables of $E$, $F \cup [E]$ are given by
+\begin{itemize}
+	\item[] $F \cup [x] = \{x\}$
+	\item[] $F \cup [\lambda x.E] = F \cup [E] \setminus \{x\}$
+	\item[] $F \cup [M\;N] = F \cup [M] \cup F \cup [N]$
+\end{itemize}
+
+$x$ is free in $E$ if $x \in F \cup [E]$ \\
+
+A variable can be both bound and free: $F \cup [x\; \lambda x.x] = B \cup [x\; \lambda x.x] = \{x\}$ \\
+
+But each occurrence is either bound or free, not both \\
+
+Two occurrences of a variable $x$ "mean the same thing" if
+\begin{enumerate}
+\item they are both free occurrences
+\item OR they have the same binding occurrence
+\end{enumerate}
+
+$\lambda x.\lambda y.y\;x$ and $\lambda a.\lambda b.b\;a$ these should mean the same thing \\
+
+$\lambda x.y\;x$ and $\lambda x.w\;x$ should not mean the same thing because $y$ and $w$ do not have to be the same free variable \\
+
+You can change the names of bound variables, but not free ones. \\
+
+\textbf{Formally:} \\
+
+\textbf{Definition ($\alpha$-conversion):} For all $x$, $y$, $M$, $\lambda x.M =_\alpha \lambda y.M[y/x]$ if $y \notin F \cup [M]$ \\
+
+$M[N/x] =$ "substitute $N$ for $x$ in $M$" \\
+
+More generally, if $C[\lambda x.M]$ denotes an expr in which $\lambda x.M$ occurs as a subexpression, then $C[\lambda x.M] =_\alpha C[\lambda y.M[y/x]]$ if $y \notin F \cup [M]$. \\
+
+e.g. 
+\begin{itemize}
+	\item[] $\lambda x.x =_\alpha \lambda y.y$
+	\item[] $x\;\lambda x.x =_\alpha x\;\lambda a.a$
+	\item[] $\lambda a.b\;a =_\alpha \lambda c.b\;c \neq_\alpha \lambda b.b\;b \neq_\alpha \lambda a.d\;a$
+\end{itemize}
+
+\textbf{Computation:} \\
+
+Expr. $(\lambda x.M)\;N$ is called a ($\beta$-)redex (reductible expression) \\
+
+We expect: $(\lambda x.M)\;N \Rightarrow$ evaluate $M$, with $N$ substituted for $x$ i.e. $M[N/x]$ \\
+
+\textbf{Definition ($\beta$-reduction):} For all $M$, $N$, $x$, $(\lambda x.M)\;N \rightarrow_\beta M[N/x]$ \\
+
+More generally - for all contexts $C$, $C[(\lambda x.M)\;N] \rightarrow_\beta C[M[N/x]]$ \\
+
+$\rightarrow_\beta$ is a binary relation on terms
+
+\begin{itemize}
+	\item[] $A \rightarrow_\beta B$: $A$ beta reduces to $B$ in one step
+	\item[] $A \rightarrow_\beta^n B$: $A$ beta reduces to $B$ in $n$ steps
+	\item[] $A \rightarrow_\beta^* B$: $A$ beta reduces to $B$ in 0 or more steps
+	\item[] $A \rightarrow_\beta^+ B$: $A$ beta reduces to $B$ in 1 or more steps
+\end{itemize}
+
+\textbf{Evaluating $M[N/x]$} \\
+
+Want: Substitute $N$ for all free occurrences of $x$ in $M$ \\
+
+\textbf{Definition (substitution, naive(wrong)):} 
+\begin{itemize}
+	\item[] $x[E/x] = E$
+	\item[] $y[E/x] = y$, $y \neq x$
+	\item[] $(M\;N)[E/x] = M[E/x]\;N[E/x]$
+	\item[] $(\lambda x.P)[E/x] = \lambda x.P$
+	\item[] $(\lambda y.P)[E/x] = \lambda y. P[E/x]$, $y \neq x$
+\end{itemize}
+
+E.g. 
+\begin{align*}
+(\lambda x.x\;y)\;z &\rightarrow_\beta (x\;y)[z/x] \\
+&= x[z/x]\;y[z/x] \\
+&= z\;y \\ \\
+(\lambda x.x)\;a &\rightarrow_\beta x[a/x] = a \\ \\
+(\lambda x. \lambda y.x)\;a\;b &\rightarrow_\beta (\lambda y.x)[a/x]\;b \\
+&= (\lambda y.x[a/x])\;b \\
+&= (\lambda y.a)\;b \\
+&\rightarrow_\beta a[b/y] \\
+&= a \\ \\
+(\lambda x. \lambda y.y)\;a\;b &\rightarrow_\beta (\lambda y.y)[a/x]\;b \\
+&= (\lambda y.y[a/x])\;b \\
+&= (\lambda y.y)\;b \\
+&\rightarrow_\beta y[b/y] \\
+&= b
+\end{align*}
+
+\textbf{Consider:}
+\begin{align*}
+(\lambda x. \lambda y.x)\;y\;w &\rightarrow_\beta (\lambda y.x)[y/x]\;w \\
+&= (\lambda y.x[y/x])\;w \\
+&= (\lambda y.y)\;w \\
+&\rightarrow_\beta y[w/y] \\
+&= w
+\end{align*}
+
+We can see from this that the last rule of $(\lambda y.P)[E/x] = \lambda y.P[E/x]$, $y \neq x$ must be wrong. \\
+
+What happened? Free variable $y$ became bound after substitution \\
+
+As a result, the binding occurrence of $x$ changed \\
+
+$\lambda x.\lambda y.x \leftarrow$ the inner $x$ is bound to the $\lambda x$ on the outside. \\
+
+This is called {\bf Dynamic binding} - meaning of variables uncertain until runtime \\
+
+We want {\bf static binding} - meanings of variables fixed before runtime \\
+
+\textbf{Definition (substitution, fixed):}
+\begin{itemize}
+	\item[] $x[E/x] = E$
+	\item[] $y[E/x] = y$, $y \neq x$
+	\item[] $(M\;N)[E/x] = M[E/x]\;N[E/x]$
+	\item[] $(\lambda x.P)[E/x] = \lambda x.P$
+	\item[] $(\lambda y.P)[E/x] = \lambda y. P[E/x]$, $y \notin F \cup [E]$
+\end{itemize}
+
+What if $y$ is free???? (Thursday class)
 \end{document}
