@@ -3,6 +3,7 @@
 \usepackage{fullpage}
 \usepackage{epsfig}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage[official]{eurosym}
 \usepackage[]{algorithm2e}
@@ -240,7 +241,222 @@ We want {\bf static binding} - meanings of variables fixed before runtime \\
 	\item[] $(M\;N)[E/x] = M[E/x]\;N[E/x]$
 	\item[] $(\lambda x.P)[E/x] = \lambda x.P$
 	\item[] $(\lambda y.P)[E/x] = \lambda y. P[E/x]$, $y \notin F \cup [E]$
+	\item[] $(\lambda y.P)[E/x] = \lambda z.(P[z/y][E/x])$, $y \in F \cup [E]$, $z$ a "fresh" variable
 \end{itemize}
 
-What if $y$ is free???? (Thursday class)
+Now 
+\begin{align*}
+(\lambda x.\lambda y.x)\;y\;w &\rightarrow_\beta (\lambda y.x)[y/x]\;w \\
+&= (\lambda z.x[z/y][y/x])\;w \\
+&= (\lambda z.x[y/x])\;w \\
+&= (\lambda z.y)\;w \\
+&\rightarrow_\beta y[w/z] \\
+&= y
+\end{align*}
+
+{\bf Computation:} $\beta$-reduction until you reach a {\bf Normal Form}. \\
+
+\textbf{Definition ($\beta$-Normal Form):} An expr is in $\beta$ Normal Form if it has no $\beta$-redices. \\
+
+\textbf{Definition (Weak Normal Form):} An expr is in Weak Normal Form if the only $\beta$-redices are inside abstractions. e.g. $\lambda z.(\lambda x.x)\;y$. \\
+
+Usually, "Normal Form" will mean $\beta$-Normal Form. \\
+
+{\bf Consider:} 
+\begin{align*}
+(\lambda x.x)((\lambda y.y)\;z) &\rightarrow_\beta x[((\lambda y.y)\;z)/x] \\
+&= (\lambda y.y)\;z \\
+&\rightarrow_\beta y[z/y] \\
+&= z
+\end{align*}
+
+Or
+
+\begin{align*}
+(\lambda x.x)((\lambda y.y)\;z) &\rightarrow_\beta (\lambda x.x)(y[z/y]) \\
+&= (\lambda x.x)\;z \\
+&\rightarrow_\beta x[z/x] \\
+&= z
+\end{align*}
+
+- two difference reduction sequences. Does it matter which we take? \\
+
+\textbf{Theorem (Church-Rosser):} Let $E_1,E_2,E_3$ be expressions such that $E_1 \rightarrow_\beta^* E_2$ and $E_1 \rightarrow_\beta^* E_3$. Then there is an expression $E_4$ such that (up to $\alpha$-equivalence) $E_2 \rightarrow_\beta^* E_4$ and $E_3 \rightarrow_\beta^* E_4$. \\
+
+{\bf Immediate Consequence -} An expr $E$ can have at most one $\beta$-Normal Form (modulo $\alpha$-equivalence) \\
+
+Do all expressions have a $\beta$-NF? No!\\
+
+{\bf Consider:}
+\begin{align*}
+(\lambda x.x\;x)(\lambda x.x\;x) &\rightarrow_\beta (x\;x)[(\lambda x.x\;x)/x] \\
+&= (\lambda x.x\;x)(\lambda x.x\;x)
+\end{align*}
+
+It does not have a $\beta$-NF because it always reduces to itself. \\
+
+Which exprs have a $\beta$-NF? - undecidable - equivalent to Halting Problem \\
+
+{\bf Consider:}
+\begin{align*}
+(\lambda x.y)((\lambda x.x\;x)(\lambda x.x\;x)) \rightarrow_\beta (\lambda x.y)((\lambda x.x\;x)(\lambda x.x\;x)) \rightarrow_\beta \cdots
+\end{align*}
+
+Or, the alternate way of reducing this
+
+\begin{align*}
+(\lambda x.y)((\lambda x.x\;x)(\lambda x.x\;x)) &\rightarrow_\beta y[(\lambda x.x\;x)(\lambda x.x\;x)/x] \\
+&= y
+\end{align*}
+
+$\therefore$ Order does matter when $\infty$-reductions are possible. \\
+
+{\bf Reduction Strategies} - "plans" for choosing a redex to reduce. \\
+
+{\bf Applicative Order Reductions (AOR)}: Choose the leftmost, innermost redex. 
+\begin{itemize}
+	\item[-] Innermost = not containing any other redex 
+	\item[-] This is called "eager evaluation" 
+\end{itemize}
+
+{\bf Normal Order Reduction (NOR):} Choose the leftmost,outermost
+\begin{itemize}
+	\item[-] outermost = not contained in any other redex
+	\item[-] "lazy evaluation"
+\end{itemize}
+
+To the example earlier, the one the results in infinite reduction is AOR and the one that go the $\beta$-NF form is NOR. \\
+
+e.g. 
+\begin{align*}
+(\lambda x.x)((\lambda y.y)\;z) &\xrightarrow{\text{AOR}}_\beta (\lambda x.x)\;z \xrightarrow{\text{AOR}}_\beta z \\
+(\lambda x.x)((\lambda y.y)\;z) &\xrightarrow{\text{NOR}}_\beta (\lambda y.y)\;z \xrightarrow{\text{NOR}}_\beta z
+\end{align*}
+
+{\bf Theorem (Standardization):} If an expr as a $\beta$-NF, then NOR is guaranteed to reach it. \\
+
+But most proramming languages use applicative order, including Scheme. \\
+
+{\bf $\eta$-reduction:} Consider $(\lambda x.y\;x)\;z \rightarrow_\beta (y\;x)[z/x] = y\;z$ \\
+
+So $\lambda x.y\;x$ behaves exactly like $z$ \\
+
+\textbf{Definition ($\eta$-reduction):} $\lambda x.M\;x \rightarrow_\eta M$ if $x \notin F \cup [M]$ \\
+
+More generally, $C[\lambda x.M\;x] \rightarrow_\eta C[M]$ if $x \notin F \cup [M]$ \\
+
+So we have $\lambda x.y\;x \rightarrow_\eta y$ \\
+
+\subsection{Programming in the $\lambda$-Calculus}
+
+Shorthand for convenience: $[[\cdot]]$: (real-world programming language) $\rightarrow \lambda$-calculus \\
+
+For a real-world expr $E$, $[[E]]$ is our representation of $E$ in the $\lambda$-calculus \\
+
+e.g. $[[id]] = \lambda x.x$ \\
+
+{\bf Note:} $[[\cdot]]$ is just shorthand. An expression containing $[[\cdot]]$ is not $\lambda$-calculus until all $[[\cdot]]$s have been replaced with what they represent. \\
+
+{\bf Booleans:} Let $[[$true$]] = \lambda x.\lambda y.x$ and $[[$false$]] = \lambda x.\lambda y.y$. \\
+
+if <bool> then <true-part> else <false-part> \\
+
+if($b,t,f$) = if $b$ then $t$ else $f$ \\ 
+
+$[[$if$]] = \lambda b. \lambda t.\lambda f.b\;t\;f$ \\
+
+Note that $\lambda b. \lambda t.\lambda f.b\;t\;f \rightarrow_\eta^2 \lambda b.b$ \\
+
+Alternatively, $[[$if B then T else F$]] = [[B]][[T]][[F]]$ \\
+
+Does it work? \\
+
+\begin{align*}
+[[\text{if true then P else Q}]] &= [[true]][[P]][[Q]] \\
+&= (\lambda x.\lambda y.x)[[P]][[Q]] \\
+&\rightarrow_\beta [[P]]
+\end{align*}
+
+\begin{align*}
+[[\text{if false then P else Q}]] &= [[false]][[P]][[Q]] \\
+&= (\lambda x.\lambda y.y)[[P]][[Q]] \\
+&\rightarrow_\beta [[Q]]
+\end{align*}
+
+Now, for the definition of {\bf Not}:
+
+\begin{align*}
+[[not]] &= \lambda b.[[\text{if b then false else true}]] \\
+&= \lambda b.b[[false]][[true]] \\
+&= \lambda b.b(\lambda x.\lambda y.y)(\lambda x.\lambda y.x)
+\end{align*}
+
+We can test it:
+
+\begin{align*}
+[[\text{not true}]] &= (\lambda b.b[[false]][[true]])\;[[true]] \\
+&\rightarrow_\beta [[true]][[false]][[true]] \\
+&= (\lambda x.\lambda y.x)[[false]][[true]] \\
+&\rightarrow_\beta^2 [[false]]
+\end{align*}
+
+For the definition of {\bf And}: 
+
+\begin{align*}
+[[and]] &= \lambda p.\lambda q.[[\text{if p then q else false}]] \\
+&= \lambda p.\lambda q.p\;q\;[[false]]
+\end{align*}
+
+For the definition of {\bf Or}: 
+
+\begin{align*}
+[[and]] &= \lambda p.\lambda q.[[\text{if p then true else q}]] \\
+&= \lambda p.\lambda q.p\;[[true]]\;q
+\end{align*}
+
+\textbf{Storage:} Use lists. Scheme - lists based on pairs.
+\begin{itemize}
+	\item[] (cons a b) creates the pair
+	\item[] (cons a (cons b c)) creates the list
+	\item[] $\therefore$ nested pairs create lists
+\end{itemize}
+
+{\bf Need to implement:}
+\begin{itemize}
+	\item cons
+	\item nil - empty list
+	\item null? - is the list empty?
+	\item car - first component of the pair
+	\item cdr - 2nd component of the pair
+\end{itemize}
+
+{\bf Modelling pairs:} pair - function that takes a {\bf selector} as a parameter \\
+
+If the selector is true - return the first component \\
+
+If the selector is true - return the second component \\
+
+i.e. $[[pair]] = \lambda s.[[$if s then h else t$]]$ where s is the selector, h is the head, t is the tail. \\
+
+So $[[pair]] = \lambda s.s\;h\;t$ \\
+
+Then $[[cons]] = \lambda h.\lambda t.\lambda s.s\;h\;t$ \\
+
+e.g. 
+\begin{align*}
+[[\text{cons a (cons b nil)}]] &= [[cons]]\;a\;([[cons]]\;b\;[[nil]]) \\
+&= (\lambda h.\lambda t.\lambda s.s\;h\;t)\;a\;([[cons]]\;b\;[[nil]]) \\
+&\rightarrow_\beta^2 \lambda s.s\;a\;([[cons]]\;b\;[[nil]]) \\
+&= \lambda s.s\;a((\lambda h.\lambda t.\lambda s.s\;h\;t)\;b\;[[nil]]) \\
+&\rightarrow_\beta^2 \lambda s.s\;a\;(\lambda s.s\;b\;[[nil]]) 
+\end{align*}
+
+{\bf car:} return the head $\Rightarrow$ pass the selector "true" \\
+
+$[[car]] = \lambda l.l\;[[true]] = \lambda l.l\;(\lambda x.\lambda y.x)$ \\
+
+Similarly, {\bf cdr:} return the tail $\Rightarrow$ pass the selector "false" \\
+
+$[[cdr]] = \lambda l.l\;[[false]] = \lambda l.l\;(\lambda x.\lambda y.y)$ \\
+
 \end{document}
