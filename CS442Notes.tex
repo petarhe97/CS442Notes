@@ -459,4 +459,159 @@ Similarly, {\bf cdr:} return the tail $\Rightarrow$ pass the selector "false" \\
 
 $[[cdr]] = \lambda l.l\;[[false]] = \lambda l.l\;(\lambda x.\lambda y.y)$ \\
 
+{\bf null?}
+\begin{itemize}
+	\item[-] must return false when given a pair $(\lambda s.s\;h\;t)$
+	\item[-] pass a selector that consumes h and t, returns false
+\end{itemize}
+
+i.e. $[[null?]] = \lambda l.l(\lambda a.\lambda b.[[false]]) = \lambda l.l(\lambda a.\lambda b.\lambda x.\lambda y.y)$ \\
+
+\begin{align*}
+[[null?]](\lambda s.s\;h\;t) &= (\lambda l.l(\lambda a.\lambda b.\lambda x.\lambda y.y))(\lambda s.s\;h\;t) \\
+&\rightarrow_\beta (\lambda s.s\;h\;t)(\lambda a.\lambda b.\lambda x.\lambda y.y) \\
+&\rightarrow_\beta (\lambda a.\lambda b.\lambda x.\lambda y.y)\;h\;t \\
+&\rightarrow_\beta^2  \lambda x.\lambda y.y \\
+&= [[false]]
+\end{align*}
+
+{\bf nil:} something to make null? return true. \\
+
+$[[nil]] = \lambda s.[[true]] = \lambda s.\lambda x.\lambda y.x$
+
+\begin{align*}
+[[null?]][[nil]] &= (\lambda l.l(\lambda a.\lambda b.\lambda x.\lambda y.y))(\lambda s.\lambda x.\lambda y.x) \\
+&\rightarrow_\beta (\lambda s.\lambda x.\lambda y.x)(\lambda a.\lambda b.\lambda x.\lambda y.y) \\
+&\rightarrow_\beta \lambda x.\lambda y.x \\
+&= [[true]]
+\end{align*}
+
+\textbf{Numbers}
+\begin{itemize}
+	\item[-] Consider only non-negative integers
+	\item[-] Easy - encode n as a list of length n
+		\begin{itemize}
+			\item[] $[[0]] = [[nil]]$
+			\item[] $[[1]] = \lambda s.s\;?\;[[nil]]$ where $?$ is just whatever
+			\item[] $[[2]] = \lambda s.s\;?\;(\lambda s.s\;?\;[[nil]])$
+		\end{itemize}
+\end{itemize}
+
+{\bf Primitives:} $[[pred]], [[succ]], [[isZero?]]$ \\
+
+$[[isZero?]] = [[null?]]$ \\
+
+$[[pred]] = [[cdr]]$ \\
+
+$[[succ]] = \lambda n.\lambda s.s\;?\;n ( = \lambda n.[[cons]]\;?\;n)$ \\
+
+{\bf Exercise:} $[[pred\;(succ\;m)]] =_\beta m$ \\
+
+\textbf{Clever Solution: Church Numberals} \\
+
+Represent n as the act of applying a function f n times to an argument x. \\
+
+$[[0]] = \lambda f.\lambda x.x$ \\
+
+$[[1]] = \lambda f.\lambda x.f\;x$\\
+
+$[[2]] = \lambda f.\lambda x.f\;(f\;x)$\\
+
+$[[3]] = \lambda f.\lambda x.f\;(f\;(f\;x))$\\
+
+$[[n]]\;f\;x = f^n(x)$ \\
+
+{\bf addition:} $m + n$ - apply f n times to x, then apply f m times to the result \\
+
+$[[+]] = \lambda m.\lambda n.\lambda f.\lambda x.m\;f\;(n\;f\;x)$ \\
+
+\begin{align*}
+[[+\;2\;3]] &= (\lambda m.\lambda n.\lambda f.\lambda x.m\;f\;(n\;f\;x))(\lambda f.\lambda x.f\;(f\;x))(\lambda f.\lambda x.f(f(f\;x))) \\
+&\rightarrow_\beta^2 \lambda f.\lambda x(\lambda f.\lambda x.f(f\;x))\;f\;((\lambda f.\lambda x.f(f\;x)))\;f\;x) \\
+&\rightarrow_\beta \lambda f.\lambda x.(\lambda x.f(f\;x))(\lambda f.\lambda x.f(f(f\;x)))\;f\;x) \\
+&\rightarrow_\beta \lambda f.\lambda x.f(f((\lambda f.\lambda x.f(f(f\;x)))\;f\;x)) \\
+&\rightarrow_\beta \lambda f.\lambda x.f(f((\lambda x.f(f(f(\;x)))\;x) \\
+&\rightarrow_\beta \lambda f.\lambda x.f(f(f(f(f\;x)))) \\
+&= [[5]]
+\end{align*}
+
+{\bf Special case:} $[[succ]] = \lambda n.\lambda f.\lambda x.n\;f\;(f\;x)$ (or $f(n\;f\;x))$ \\
+
+\textbf{Subtraction:} Harder - find a function to apply n times to produce $[[n-1]]$ \\
+
+{\bf Consider:} Start with $[[cons\;0\;0]]$ \\
+
+apply the function $f:[[cons\;a\;b]] \rightarrow [[cons\;a+1\;a]]$ \\
+
+n times: $[[cons\;n\;n-1]]$ - then take the cdr. \\
+
+$[[pred]] = \lambda n.[[cdr]]\;(n\;(\lambda p.[[cons]]([[succ]][[car\;p]])\;[[car\;p]])([[cons]][[0]][[0]]))$ \\
+
+$[[-]] = \lambda m.\lambda n.n\;[[pred]]\;m$ \\
+
+{\bf Multiplication:} Apply the n-fold repetition of f, m times \\
+
+$[[*]] = \lambda m.\lambda n.\lambda f.\lambda x.m\;(n\;f)\;x =_\eta \lambda m. \lambda n.\lambda f.m\;(n\;f)$ \\
+
+Since $n\;f = f^n$, then $m\;(n\;f) = (f^n)^m$ \\
+
+Notice that if you change $m$ and $n$ to $f$ and $g$, and $f$ to $x$, you get $f(g(x))$ which is just function composition. \\
+
+{\bf Exponentiation:} $m^n$ - the n-fold repetition of m itself \\
+
+$[[\;\widehat{}\;]] = \lambda m.\lambda n.\lambda f.\lambda x.n\;m\;f\;x =_\eta \lambda m.\lambda n.n\;m$ \\
+
+\textbf{Recursion:} find the length of a list 
+\begin{align*}
+[[len]] &= \lambda l.[[\text{if (null? $l$) 0 (succ (len (cdr l)))]]}\\
+&= \lambda l.\text{([[null?]] $l$) [[0]] ([[succ]] ([[len]] ([[cdr]] $l$)))}
+\end{align*}
+
+{\bf WRONG!} [[len]] defined in terms of itself. \\
+
+How do we get a closed-form representation of len? Solve the equation. \\
+
+{\bf Aside:} fixed points. A {\bf fixed point} of a function f is a value x such that $x = f(x)$ \\
+
+e.g. $f(x) = x^2 - 6$ has a fixed point of 3 since $f(3) = 3$ 
+\begin{align*}
+[[len]]&=\lambda l.([[null?]]\;l)[[0]]([[succ]]([[len]]([[cdr]]\;l)))\\
+&\leftarrow_\beta (\lambda f.\lambda l.([[null?]]\;l)[[0]]([[succ]](f\;([[cdr]]\;l))))\;[[len]] \\
+&=_\beta F([[len]])\text{     where F = $(\lambda f.\lambda l.([[null?]]\;l)[[0]]([[succ]](f\;([[cdr]]\;l))))$}
+\end{align*}
+
+[[len]] satisfies $[[len]] = F([[len]])$ \\
+
+$\therefore$ Need a fixed point of $F$ \\
+
+{\bf Consider:}
+\begin{align*}
+X &= (\lambda x.f(x\;x))(\lambda x.f(x\;x)) \\
+&\rightarrow_\beta f((\lambda x.f(x\;x))(\lambda x.f(x\;x))) \\
+&= f(X) \\
+\end{align*}
+
+$\therefore$ X is a fixed point of f \\
+
+Now parameterize by f, get
+
+$$Y = \lambda f.(\lambda x.f(x\;x))(\lambda x.f(x\;x))$$
+
+This is {\bf Curry's Paradoxical Combinator} (or Y combinator) \\
+
+- returns the fixed point of any function \\
+
+\begin{align*}
+Y\;g &= (\lambda f.(\lambda x.f(x\;x))(\lambda x.f(x\;x)))\;g \\
+&\rightarrow_\beta (\lambda x.g(x\;x))(\lambda x.g(x\;x)) \\
+&\rightarrow_\beta g((\lambda x.g(x\;x))(\lambda x.g(x\;x))) \\
+&\rightarrow_\beta g(Y\;g) 
+\end{align*}
+
+$\therefore$ for any {\bf $g$, $Y\;g =_\beta g(Y\;g)$}. i.e. Y g is a fixed point of g. \\
+
+Any combinator (closed expression) C such that for all g, $C\;g =_\beta g(C\;g)$ is called a {\bf fixed-point combinator}. \\
+
+$\therefore$ $[[len]] = Y\;F = Y(\lambda f.\lambda l.([[null?]]\; l)\;[[0]]\;([[succ]]\;(f\;([[cdr]]\;l)))$ \\
+
 \end{document}
