@@ -614,4 +614,144 @@ Any combinator (closed expression) C such that for all g, $C\;g =_\beta g(C\;g)$
 
 $\therefore$ $[[len]] = Y\;F = Y(\lambda f.\lambda l.([[null?]]\; l)\;[[0]]\;([[succ]]\;(f\;([[cdr]]\;l)))$ \\
 
+e.g.
+\begin{align*}
+& [[len]]\;([[cons]]\;a\;([[cons]]\;b\;[[nil]]) \\ 
+&=_\beta [[len]]\;(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])) \\\
+&= Y;F(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])) \\
+&= (\lambda f.(\lambda x.f(x\;x))(\lambda x.f(x\;x))\;F\;(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])) \text{   done through NOR reduction}\\
+&\rightarrow_\beta (\lambda x.F(x\;x))(\lambda x.F(x\;x))(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])) \\
+&\rightarrow_\beta F((\lambda x.F(x\;x))(\lambda x.F(x\;x)))(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])) \\
+&= (\lambda f.\lambda l.([[null?]]\; l)\;[[0]]\;([[succ]]\;(f\;([[cdr]]\;l)))((\lambda x.F(x\;x))(\lambda x.F(x\;x)))(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])) \\
+&\rightarrow_\beta (\lambda l.([[null?]]\;l)\;[[0]]\;([[succ]]\;(((\lambda x.F(x\;x))(\lambda x.F(x\;x)))\; ([[cdr]]\;l))))(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])) \\
+&\rightarrow_\beta ([[null?]]\;(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])))\;[[0]]\;([[succ]]\;(((\lambda x.F(x\;x))(\lambda x.F(x\;x)))\; ([[cdr]]\;(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]]))))) \\
+&\rightarrow_\beta^* [[false]]\;[[0]]\;[[succ]](((\lambda x.F(x\;x))(\lambda x.F(x\;x)))\;([[cdr]]\;(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])))) \\
+&\rightarrow_\beta^2 [[succ]]\;(((\lambda x.F(x\;x))(\lambda x.F(x\;x)))\;([[cdr]]\;(\lambda s.s\;a\;(\lambda s.s\;b\;[[nil]])))) \\
+&\rightarrow_\beta^* [[succ]](((\lambda x.F(x\;x))(\lambda x.F(x\;x)))\;(\lambda s.s\;b\;[[nil]]))\text{     Not NOR-done for brevity}\\
+&\text{We can see a pattern here} \\
+&\rightarrow_\beta^* [[succ]]([[succ]]\;((\lambda x.F(x\;x))(\lambda x.F(x\;x)))([[cdr]]\;(\lambda s.s\;b\;[[nil]])))) \\
+&\rightarrow_\beta^* [[succ]]([[succ]]((\lambda x.F(x\;x))(\lambda x.F(x\;x)))[[nil]]) \\
+&\rightarrow_\beta [[succ]]([[succ]] (F\;((\lambda x.F(x\;x))(\lambda x.F(x\;x))))[[nil]]])\\
+&= [[succ]]([[succ]]((\lambda f.\lambda l.([[null?]]\; l)\;[[0]]\;([[succ]]\;(f\;([[cdr]]\;l)))\;((\lambda x.F(x\;x))(\lambda x.F(x\;x))) [[nill]]) \\
+&\rightarrow_\beta^2 [[succ]]([[succ]]\;([[null?]][[nil]])\;[[0]]\;([[succ]]\;((\lambda x.F(x\;x))(\lambda x.F(x\;x))))\;([[cdr]][[nil]])) \\
+&\rightarrow_\beta^* [[succ]]([[succ]]\;[[true]]\;[[0]]\;([[succ]]\;((\lambda x.F(x\;x))(\lambda x.F(x\;x))))\;([[cdr]][[nil]]))  \\
+&\rightarrow_\beta^2 [[succ]]([[succ]]\;0) \\
+&\rightarrow_\beta^2 [[2]]
+\end{align*}
+
+- Works under NOR, but not under AOR. \\
+
+For recursion under eager evaluation, need 3 things:
+\begin{itemize}
+	\item[1)] Modified reduction strategy - Applicative Order Evaluation (AOE)
+	\begin{itemize}
+		\item[-] choose the leftmost, innermost redex that is not within the body of an abstraction
+	\end{itemize}
+	\item[2)] Modified Y combinator
+	\begin{itemize}
+		\item[-] $Y' = \lambda f.(\lambda x.f(\lambda y.x\;x\;y))(\lambda x.f(\lambda y.x\;x\;y))$
+		\item[] Note: $Y' \rightarrow_\eta^2 Y$
+	\end{itemize}
+	\item[3)] "Short-circuit if-then-else"
+	\begin{itemize}
+		\item[] [[if B then T else F]] [[B]] $(\lambda x.[[T]])$ $(\lambda x.[[F]])$ x
+	\end{itemize}
+\end{itemize}
+
+\pagebreak
+\subsection{Scheme \& Functional Programming}
+
+See notes, Chapter 3 \\
+
+- "pure" functional programming - No side effects, no mutation, no mutation, no state, no I/O \\
+
+$\Rightarrow$ referential transparency - output of a function is completely determined by its input \\
+
+Consequence - "equals can be substituted for equals" \\
+
+e.g. (let ((z (f 3))) $\cdots$) - anywhere z occurs, can substitute (f 3), and vice versa\\
+
+- Not possible in the presence of side-effects. \\
+
+\textbf{Higher-Order Functions} \\
+
+Functions are {\bf first-class values} - can be
+\begin{itemize}
+	\item[1)]  passed as parameters
+	\item[2)] returned by functions
+	\item[3)] stored as data
+\end{itemize}
+
+Functions that take or return other functions are called {\bf higher-order functions}  \\
+
+e.g. map, foldl, foldr\\
+
+{\bf Consider:} $\lambda x.\lambda y.x$  $(lambda x.\lambda y.x)\;a\;b \rightarrow_\beta^2 a$ \\
+
+- takes 2 arguments and returns the first \\
+
+In Scheme: (lambda (x) (lambda (y) x)) \\
+
+(((lambda (x) (lambda (y) x)) 1) 2) \\
+
+This form (lambda (x) (lambda (y) x)) called {\bf curried}. \\
+
+- simulate multi-argument functions with functions that return functions \\
+
+Advantage - partial application \\
+
+(define plus (lambda (x) (lambda (y) (+ x y)))) \\
+
+(define f (plus 5)) - save for later use - f is a function that adds 5\\
+
+(f 1) $\Rightarrow$ 6 \\
+
+(f 8) $\Rightarrow$ 13 \\
+
+{\bf Implemented}
+
+- first-class functions implemented as a {\bf closure} \\
+
+- a pair [function code | env] \\
+
+- pointer to function code, pointer to the environment in which the function was defined. \\
+
+This is how f knows what x was when (plus 5) was called. \\
+
+\pagebreak
+
+\section{Type Theory} 
+
+Consider [[true id]] 
+\begin{align*}
+[[true]][[id]] &= (\lambda x.\lambda y.x)(\lambda z.z) \\
+&\rightarrow_\beta \lambda y.\lambda z.z \\
+&= [[false]]
+\end{align*}
+
+(true id) produces false. Makes sense? NO! \\
+
+Unrestricted combinations $\Rightarrow$ unexpected results. - only do things that make sense \\
+
+How? Introduce a system of {\bf types}
+\begin{itemize}
+	\item[-] set of values an expression can have
+	\item[-] interpretation of raw data
+\end{itemize}
+
+{\bf Type System} - set of types and set of rules for assigning types \\
+
+An expression is {\bf well-typed} if a type is derivable for it from the type rules - else it is {\bf ill-typed} \\
+
+Strong vs weak typing - how strictly are type rules enforced? \\
+
+Static vs Dynamic Typing
+\begin{itemize}
+	\item[-] When are types determined
+		\begin{itemize}
+			\item[-] static-at-compile-time (C)
+			\item[-] dynamic-at-run-time (Scheme)
+		\end{itemize}
+\end{itemize}
+
 \end{document}
