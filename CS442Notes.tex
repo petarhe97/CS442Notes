@@ -754,4 +754,169 @@ Static vs Dynamic Typing
 		\end{itemize}
 \end{itemize}
 
+Monomorphic vs. Polymorphic typing
+\begin{itemize}
+	\item[monomorphic-] entities have a unique type
+	\item[polymorphic-] entities can have multiple types
+\end{itemize}
+
+We study strong,static, monomorphic (for now) typing. \\
+
+\subsection{The Simply-Typed $\lambda$-Calculus (monomorphic}
+
+{\bf Syntax:}
+\begin{align*}
+<expr> &::= <var>\;|\;<abs>\;|\;<app> \\
+<var> &::= a\;|\;b\;|\;c\;|\cdots \\
+<abs> &::= \lambda <var>\;:\;<type>.<expr> \\
+<app> &::= <expr><expr> \\
+<type> &::= <primitive>\;|\;<constructed> \\
+<primitive> &::= t_1|t_2|\cdots \\
+<constructed> &::= <type> \rightarrow <type> \\
+\end{align*}
+
+{\bf Primitive types} - "built-in", e.g. int, bool, $t_1$, $t_2$, ... \\
+
+{\bf Constructed types} 
+\begin{itemize}
+	\item[-] built from other types
+	\item[-] component types and type constructor
+\end{itemize}
+
+e.g. int $\rightarrow$ bool - "function taking int and returning bool" \\
+
+- the $\rightarrow$ is type constructor for functions \\
+
+$\rightarrow$: right-to-left associative \\
+
+$t_1 \rightarrow t_2 \rightarrow t_3 = t_1 \rightarrow (t_2 \rightarrow t_3) \neq (t_1 \rightarrow t_2) \rightarrow t_3$ \\
+
+\subsection{Type Checking/Inference}
+
+Type theory $\cong$ Intuitionist Implicational Logic (subset of propositional logic) \\
+
+- called the Curry-Howard Isomorphism \\
+
+Rules expressed as a formal inference system. \\
+
+$\frac{premises}{conclusion}$ \\
+
+$\frac{P_1 \cdots P_n}{C} = $ "If we can construct proofs of $P_1 \cdots P_n$, we have a proof of C. \\
+
+No premises: $\frac{}{conclusion}$ - axioms - conclusion always holds \\
+
+Eg.(logic): "modus ponens" $\frac{p\rightarrow q\;p}{q}$ \\
+
+$\frac{a\;b}{a \land b}$ ($\land$ introduction) \\
+
+$\frac{a \land b}{a}$  $\frac{a \land b}{b}$ ($\land$ elimination) \\
+
+\subsection{Type rules for Simply Typed $\lambda$-Calculus} 
+
+type environment
+\begin{itemize}
+	\item[-] map from identifiers to types
+	\item[-] list of <name,type> pairs - "symbol table"
+	\item[-] denoted A ("assumptions") or $\Gamma$ 
+\end{itemize}
+
+A(x) = "look up x in A" - if $<x,\tau > \in$ A, A(x) = $\tau$ \\
+
+{\bf Type judgement} - statement of the form $A \vdash E:\tau$ \\
+
+- $\vdash$ turnstile $\equiv$ derivability \\
+
+Variables - look up in environment \\
+
+The course notes says $\frac{A(x) = \tau}{A \vdash x:\tau}\;[var]$ \\
+
+We are going with $\frac{}{A \vdash x:A(x)}\;[var]$ to save some writing \\
+
+{\bf Abstractions} - assume the param has the given type, then type the body\\
+
+$$\frac{A + <x_1,\tau_1> \vdash E:\tau_2}{A \vdash (\lambda x:\tau_1\;.\;E):\tau_1 \rightarrow \tau_2}\;[abs]$$
+
+{\bf Applications}
+\begin{itemize}
+	\item[-] type the rator and rand
+	\item[-] type of the rand must match the param type of the rator
+	\item[-] type of expr is the result type of the rator
+\end{itemize}
+
+$$\frac{A \vdash M:\tau_1 \rightarrow \tau_2 \;\; A \vdash N:\tau_1}{A \vdash M\;N:\tau_2}\;[app]$$
+
+$$\frac{\tau_1 \rightarrow \tau_2 \;\; \tau_1}{\tau_2}$$
+
+Ex. find the type of $\lambda x:t_1.x$ \\
+
+$$\frac{\frac{}{\{<x,t_1>\} \vdash x:t_1}\;[var]}{\{\} \vdash (\lambda x:t_1.x):t_1 \rightarrow t_1}\;[abs]$$
+
+Eg. $\lambda x:t_1. \lambda y:t_1 \rightarrow t_2.\;y\;x$ \\
+
+$$\frac{\frac{\frac{\frac{}{\{<x,t_1>,<y, t_1 \rightarrow t_2\} \vdash y: t_1 \rightarrow t_2}\;[var]\;\;\frac{}{\{<x,t_1>,<y,t_1 \rightarrow t_2\} \vdash x:t_1}\;[var]}{\{<x,t_1>,<y,t_1 \rightarrow t_2>\} \vdash y\;x: t_2}\;[app]}{\{<x,t_1>\} \vdash (\lambda y:t_1 \rightarrow t_2.\;y\;x): (t_1 \rightarrow t_2) \rightarrow t_2}\; [abs]}{\{\} \vdash (\lambda x:t_1. \lambda y:t_1 \rightarrow t_2.\;y\;x): t_1 \rightarrow (t_1 \rightarrow t_2) \rightarrow t_2} \; [abs]$$
+
+\subsection{Evaluating Type Systems}
+
+- How do we know these type rules work? \\
+
+2 Theorems: {\bf Progress} and {\bf Preservation} \\
+
+\textbf{Theorem (progress):} Let $E$ be a closed, well-typed term in the Simply Typed $\lambda$ Calculus, i.e. for some $A$, $\tau$, $A \vdash E:\tau$. Then either E (E is a value) is in Weak Normal Form or there is an expression $E'$ such that $E \rightarrow_\beta E'$. \\
+
+Proof: Induction on the length of the type derivation for E. \\
+
+Case 1: E is a variable - impossible if E is closed. \\
+
+Case 2: E is an abstraction $\Rightarrow$ E is in Weak Normal Form, done. \\
+
+Case 3: E is an application, $E = M\;N$. Then the type derivation for E looks like $$\frac{\frac{\cdots}{A \vdash M: \tau_1 \rightarrow \tau_2} \; \; \frac{\cdots}{A \vdash N:\tau_1}}{A \vdash E:\tau}$$
+ 
+By induction, M is in Weak Normal Form or reducible \\
+
+By induction, N is in Weak Normal Form or reducible \\
+
+If M or N is reducible, then so is E since $E = M\;N$ \\
+
+If neither is reducible, then both are values \\
+
+In that case, M is a value, $M = \lambda x.M'$, By app rule, M's type derivation must look like
+$$\frac{\cdots}{A \vdash (\lambda x.\tau_1. M'): \tau_1 \rightarrow \tau}\;[abs]$$
+
+So $E = M\;N = (\lambda x:\tau_1.M')\;N$ is reducible. (N is $\tau_1$)\\
+
+QED. \\
+
+Simple, but less so when the language is enhanced. \\
+
+{\bf Progress} $\Rightarrow$ can't get stuck, e.g. can't derive $(\lambda x:t_1.A)\;B$ where $B$ is $t_2$ \\
+
+{\bf Theorem (Preservation, aka Subject Reduction Theorem):} Let A be a type environment, P, Q be expressions such that $P \rightarrow_{\beta \eta}^* Q$ (i.e. P reduces to Q in 0 or more $\beta$ and/or $\eta$ reductions). Suppose $A \vdash P: \tau$ for some $\tau$. Then $A \vdash Q:\tau$. \\
+
+Proof: see notes, page 57-58 \\
+
+{\bf Preservation:} Well-typed terms remain well-typed after reduction \\
+
+Progress and Preservation $\Rightarrow$ Safety. \\
+
+Star with E which is well typed, Progress says E is reducible or E is WNF (done). Then if E is not done $E \rightarrow_\beta E'$, from this preservation says $E'$ is well-typed, and then progress says $E'$ is reducible or $E'$ is done. This means $E' \rightarrow_\beta E''$, and then Preservation says $E''$ is well typed, etc. \\
+
+$\therefore$ Well-typed terms either reduce forever, or make a "sensible" value. \\
+
+$\therefore$ Our type rules "make sense" \\
+
+{\bf Strong Normalization Theorem:} The set of well-typed terms in the Simply Typed $\lambda$-Calculus is {\bf strong normalizing} - that is, infinite reductions are impossible. \\
+
+Proof: Appendix B. \\
+
+$\Rightarrow$ Simply typed $\lambda$-Calculus not Turing-complete. (Can't simulate no terminating turing machine)\\
+
+{\bf Intuition:} Consider $(\lambda x.x\;x)(\lambda x.x\;x)$ \\
+
+What type can we give $\lambda x.x\;x$ - How do we type $x\;x$\\
+
+If the 2nd x has some type $\tau_1$, then 1st x must have type $\tau_1 \rightarrow \tau_2$ for some $\tau_2$ \\
+
+No way $\tau_1$ and $\tau_1 \rightarrow \tau_2$ can represent the same type. $\therefore$ no type for x, $\lambda x.x\;x$, $(\lambda x.x\;x)(\lambda x.x\;x)$ \\
+
+Can't type $Y$ either. \\
 \end{document}
