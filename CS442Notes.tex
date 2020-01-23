@@ -919,4 +919,213 @@ If the 2nd x has some type $\tau_1$, then 1st x must have type $\tau_1 \rightarr
 No way $\tau_1$ and $\tau_1 \rightarrow \tau_2$ can represent the same type. $\therefore$ no type for x, $\lambda x.x\;x$, $(\lambda x.x\;x)(\lambda x.x\;x)$ \\
 
 Can't type $Y$ either. \\
+
+\subsection{Polymorphism}
+
+-exprs may have multiple types \\
+
+Cardelli and Wegner (computing Surveys 1985) - polymorphism hierarchy \\
+
+Polymorphism
+\begin{itemize}
+	\item[-] universal 
+		\begin{itemize}
+			\item[-] parametric
+			\item[-] inclusion
+		\end{itemize}
+	\item[-] adhoc
+		\begin{itemize}
+			\item[-] Overloading
+			\item[-] (implicit) coercion
+		\end{itemize}
+\end{itemize}
+
+Universal 
+\begin{itemize}
+	\item[-] generally, one implementation with many types
+	\item[-] unbounded number of specializations
+	\item[-] works on unknown (not yet created types
+	\item[-] Parametric
+	\begin{itemize}
+		\item[-] "type parameter" (often implicit)
+		\item[e.g.] function id (x:t) : t
+		\item[] return x;
+		\item[$\approx$] generic programming ML, Haskell
+	\end{itemize}
+	\item[-] Inclusion
+	\begin{itemize}
+		\item[-] "subtyping" hierarchy of types
+		\item[-] can use a subtype in any context that calls for a supertype (OOP)
+	\end{itemize}
+\end{itemize}
+
+Adhoc
+\begin{itemize}
+	\item[-] generally, several implementations
+	\item[-] bounded number of specializations
+	\item[-] works on only known (existing) types
+	\item[-] Overloading
+	\begin{itemize}
+		\item[-] "name sharing"
+		\item[-] multiple functions with the same name in the same scope
+		\item[-] compiler chooses the correct instance based on 
+			\begin{itemize}
+				\item[1)] Number and type of arguments
+				\item[2)] (possibly) return type
+				\item[-] this is called "overload resolution"
+			\end{itemize}
+		\item[e.g.] Ada
+	\end{itemize}
+	\item[-] Coercion
+	\begin{itemize}
+		\item[-] Implicit
+		\begin{itemize}
+			\item[-] expression automatically converted to a different type
+			\item[e.g.] C, 3.5 + 4 = 7.5, 4 is an implicit conversion to double
+		\end{itemize}
+		\item[-] Explicit
+		\begin{itemize}
+			\item[-] conversion invoked by the programmer 
+			\item[-] "casting"
+		\end{itemize}
+	\end{itemize}
+\end{itemize}
+
+For now: parametric polymorphism \\
+
+\subsection{System F (or 2nd order $\lambda$ calculus}
+
+- discovered independently by Girard ("System F"), and Reynolds ("polymorphic $\lambda$-calculus") \\
+
+- models parametric polymorphism
+
+e.g.
+\begin{itemize}
+	\item[] $\lambda x:int.x$ - id for ints
+	\item[] $\lambda x:bool.x$ - id for bools
+	\item[] $\lambda x:int\rightarrow int.x$ - id for int functions
+	\item[-] same implementation, different annotations
+\end{itemize}
+
+{\bf idea;} make the type a parameter to the function \\
+
+{\bf Syntax:}:
+\begin{align*}
+	<expr> &::= <var>|<abs>|<app>|<t-abs>|<t-app> \\
+	<var> &::= a|b|c|\cdots \\
+	<abs> &::= \lambda <var>:<type>.<expr> \\
+	<app> &::= <expr><expr> \\
+	<t-abs> &::= \land <t-var>.<expr> \\
+	<t-app> &::= <expr>\{<type>\} \\
+	<type> &::= <prim>|<t-var>|<type>\rightarrow <type>|\forall <t-var>.<type>\\
+	<prim> &::= t_1|t_2|\cdots \\
+	<t-var> &::= \alpha|\beta|\gamma|\cdots \\
+\end{align*}
+
+variables,app - as before \\
+
+t-abs,t-app - "type abstraction", "type application" \\
+
+type abstraction - function parameterized by type \\
+
+t-var - "type variable" - placeholder for types \\
+
+$\forall <t-var>.<type>$ - quantified type - the type of a type abstraction \\
+
+Ex. $\lambda x:int.x$  int $\rightarrow$ int, and $\lambda x:bool.x$   bool $\rightarrow$ bool  - Now replace int,bool by a type variable \\
+
+$(\lambda x:\alpha.x): \alpha \rightarrow \alpha$ \\
+
+$\alpha$ - a free type variable - meaning depends on external context \\
+
+Now abstract over $\alpha$: \\
+
+$$id = (\land \alpha.\lambda x:\alpha.x) : \forall \alpha.\alpha \rightarrow \alpha$$
+
+To apply id: 
+\begin{align*}
+id\;\{int\}\;3 &= (\land \alpha. \lambda x:\alpha.x)\;\{int\}\;3 \\
+&\rightarrow_\beta (\lambda x:int.x)\;3 \\
+&\rightarrow_\beta 3 \\
+\end{align*}
+
+\begin{align*}
+id\;\{bool\}\;true &= (\land \alpha. \lambda x:\alpha.x)\;\{bool\}\;true \\
+&\rightarrow_\beta (\lambda x:bool.x)\;true \\
+&\rightarrow_\beta true \\
+\end{align*}
+
+{\bf Type rules:} 
+
+$$\frac{}{A \vdash x:A(x)}\;[var]$$
+
+$$\frac{<x,\tau_1> + A \vdash E:\tau_2}{A \vdash (\lambda x:\tau_1.E):\tau_1 \rightarrow \tau_2}\;[abs]$$
+
+$$\frac{A \vdash M:\tau_1 \rightarrow \tau_2 \;\;\;\; A \vdash N:\tau_1}{A \vdash (MN):\tau_2}\;[app]$$
+
+$$\frac{A \vdash E:\tau}{A \vdash (\land \alpha.E):\forall \alpha.\tau}\;[t-abs](\alpha \text{ not free in A})$$
+
+$$\frac{A \vdash E: \forall \alpha.\tau_1}{A \vdash (E \{\tau_2\}):\tau_1[\tau_2/\alpha]}[t-app]$$ \\
+
+Type $\forall \alpha.\alpha \rightarrow \alpha \equiv$ for any type $\tau$, the function can be given type $\tau \rightarrow \tau$. \\
+
+$\forall \alpha$ is the binding occurrence \\
+
+The $\alpha$s afterwards are the bound occurrences \\
+
+- same substitution, $\alpha$-equivalence rules for types as for $\lambda$ terms. \\
+
+{\bf Nested quantifiers:} \\
+
+Say $f:(\forall \alpha.\alpha \rightarrow \alpha) \rightarrow int$ \\
+
+parameter type : $\forall \alpha.\alpha \rightarrow \alpha$ \\
+
+result type: int \\
+
+$\therefore$ f {\bf requires} a polymorphic function as argument, then returns int \\
+
+$g: ((\forall \alpha.\alpha \rightarrow \alpha) \rightarrow int) \rightarrow (\forall \beta.\beta \rightarrow (\beta \rightarrow \beta))$ \\
+
+g requires (a function requiring a polymorphic argument) as its argument, returns a polymorphic result \\
+
+$h: int \rightarrow (\forall \alpha.\alpha \rightarrow \alpha)$ \\
+
+- h takes an int and returns a polymorphic function \\
+
+$k: \forall \alpha. int \rightarrow (\alpha \rightarrow \alpha)$ \\
+
+- polymorphic - for any $\tau$, k takes int and returns $\tau \rightarrow \tau$ \\
+
+System F types more terms than the simply typed $\lambda$ calculus \\
+
+Can now do self-application \\
+
+Before: $(\lambda x:int \rightarrow int.x) (\lambda x:int.x) \rightarrow_\beta (\lambda x:int x)$ (they are not the same) \\
+
+Now: $id = \land \alpha.\lambda x:\alpha.x$   $\;\;\;\; \forall \alpha.\alpha \rightarrow \alpha$ \\
+
+Can code id id as 
+\begin{align*}
+&id\;\;\{\forall \alpha.\alpha \rightarrow \alpha\}\;\; id \\
+&= (\land \alpha.\lambda x:\alpha.x)\{\forall \alpha.\alpha \rightarrow \alpha\} (\land \alpha.\lambda x:\alpha.x) \\
+&\rightarrow_\beta (\lambda x:(\forall \alpha.\alpha \rightarrow \alpha).x) (\land \alpha.\lambda x:\alpha.x) \\
+&\rightarrow_\beta (\land \alpha.\lambda x:\alpha.x) \\
+&= id
+\end{align*}
+
+Can abstract out the self-application:
+$$id\;id =_\beta (\lambda x.x\;x)\;id$$ \\
+
+So 
+\begin{align*}
+&(\land \alpha.\lambda x:\alpha.x)\{\forall \alpha.\alpha \rightarrow \alpha\} (\land \alpha.\lambda x:\alpha.x) \\
+&= (\lambda x:(\forall \alpha.\alpha \rightarrow \alpha).x\{\forall \alpha.\alpha \rightarrow \alpha\}\;x)(\land \alpha.\lambda x:\alpha.x) 
+\end{align*}
+
+So $\lambda x:(\forall \alpha.\alpha \rightarrow \alpha).x\{\forall \alpha.\alpha \rightarrow \alpha\}\;x$ is a well-typed implementation of $\lambda x.x\;x$ \\
+
+$$\frac{\frac{\frac{\frac{}{\{<x,\forall \alpha.\alpha \rightarrow \alpha>\} \vdash x:\forall \alpha.\alpha \rightarrow \alpha}\;[var]}{\{<x,\forall \alpha.\alpha \rightarrow \alpha>\} \vdash (x \{\forall \alpha.\alpha \rightarrow \alpha\}): (\forall \alpha.\alpha \rightarrow \alpha) \rightarrow (\forall \alpha.\alpha \rightarrow \alpha)}\;[t-app] \;\;\; \frac{}{\{<x,\forall \alpha.\alpha \rightarrow \alpha>\} \vdash x:\forall \alpha.\alpha \rightarrow \alpha}\;[var]}{\{<x,\forall \alpha.\alpha \rightarrow \alpha>\} \vdash (x\;\{\forall \alpha.\alpha \rightarrow \alpha\}\;x):\forall \alpha.\alpha \rightarrow \alpha}\;[app]}{\{\} \vdash (\lambda x:(\forall \alpha.\alpha \rightarrow \alpha).x\{\forall \alpha.\alpha \rightarrow \alpha\}\;x): (\forall \alpha.\alpha \rightarrow \alpha) \rightarrow (\forall \alpha.\alpha \rightarrow \alpha)}\;[abs]$$
+
+
 \end{document}
