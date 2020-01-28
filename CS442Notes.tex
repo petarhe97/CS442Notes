@@ -1127,5 +1127,166 @@ So $\lambda x:(\forall \alpha.\alpha \rightarrow \alpha).x\{\forall \alpha.\alph
 
 $$\frac{\frac{\frac{\frac{}{\{<x,\forall \alpha.\alpha \rightarrow \alpha>\} \vdash x:\forall \alpha.\alpha \rightarrow \alpha}\;[var]}{\{<x,\forall \alpha.\alpha \rightarrow \alpha>\} \vdash (x \{\forall \alpha.\alpha \rightarrow \alpha\}): (\forall \alpha.\alpha \rightarrow \alpha) \rightarrow (\forall \alpha.\alpha \rightarrow \alpha)}\;[t-app] \;\;\; \frac{}{\{<x,\forall \alpha.\alpha \rightarrow \alpha>\} \vdash x:\forall \alpha.\alpha \rightarrow \alpha}\;[var]}{\{<x,\forall \alpha.\alpha \rightarrow \alpha>\} \vdash (x\;\{\forall \alpha.\alpha \rightarrow \alpha\}\;x):\forall \alpha.\alpha \rightarrow \alpha}\;[app]}{\{\} \vdash (\lambda x:(\forall \alpha.\alpha \rightarrow \alpha).x\{\forall \alpha.\alpha \rightarrow \alpha\}\;x): (\forall \alpha.\alpha \rightarrow \alpha) \rightarrow (\forall \alpha.\alpha \rightarrow \alpha)}\;[abs]$$
 
+Another solution gives $(\forall \alpha. \alpha \rightarrow \alpha) \rightarrow t_1 \rightarrow t_1$ \\
+
+So we can write $\lambda x.x\;x$ as $\lambda x:(\forall \alpha. \alpha \rightarrow \alpha).(x\{t_1 \rightarrow t_2\})(x\{t_1\})$ with type $(\forall \alpha. \alpha \rightarrow \alpha) \rightarrow (t_1 \rightarrow t_1)$ \\
+
+Replace $t_1$ with $\beta$ and abstract 
+
+$$\frac{\{\} \vdash (\lambda x:(\forall \alpha. \alpha \rightarrow \alpha).(x\{\beta \rightarrow \beta\})(x\{\beta\}): (\forall \alpha. \alpha \rightarrow \alpha) \rightarrow \beta \rightarrow \beta}{\{\} \vdash (\land \beta.\lambda x:(\forall \alpha. \alpha \rightarrow \alpha).(x\{\beta \rightarrow \beta\})(x\{\beta\}): \forall \beta.(\forall \alpha. \alpha \rightarrow \alpha) \rightarrow \beta 
+\rightarrow \beta}$$
+
+So $\forall \beta.(\forall \alpha. \alpha \rightarrow \alpha) \rightarrow \beta \rightarrow \beta$ is another valid type. \\
+
+Another solution gives $\forall \beta.(\forall \alpha. \alpha) \rightarrow \beta$ \\
+
+Three valid types for $\lambda x.x\;x$  \\
+
+\subsection{ML ("Meta Language")}
+
+(monomorphic subset) \\
+
+Robin Milner, 1978 \\
+
+- major dialects:
+\begin{itemize}
+	\item[] SML: (Standard ML)
+	\item[] Caml (Categorical Abstract Machine Language)
+\end{itemize}
+
+The one we use in undergrad environment is Standard ML of New Jersey.
+\begin{itemize}
+	\item[] quit: ctrl + D
+\end{itemize}
+
+- mostly functional, statically typed, eager evaluation. \\
+
+Expressions: 1 + 2; \\
+
+ML responds with val it = 3: int \\
+
+- we get the value of the result and the type of the result. Plus, we get a name for the value "it", which is given to the most recently executed expression. \\
+
+- semicolon says "Ready for a response from the compiler" 
+
+Declarations: val x:int = 1; (* case-sensitive *)     $\leftarrow$ this is a comment \\
+
+Functions: val f = fn (x:int) $=>$ x + 1; \\
+
+the fn (x:int) $=>$ x + 1 is equivalent to $\lambda x:int. x+1$ \\
+
+You can also do val f = fn: int $->$ int, where fn is a function from int to int. \\
+
+- does not permit recursive definitions \\
+
+recursion: val rec fact = fn (n:int) $=>$ if n = 0 then 1 else n * fact(n - 1); \\
+
+shorthand: fun f (x:int) = x + 1 \\
+
+fun fact(n:int) = if n = 0 then 1 else n * fact(n-1) \\
+
+"rec" is built in now \\
+
+FYI: Negation is $\sim$. \\
+
+So 0 - 1; gives you val it = $\sim 1$:int \\
+
+Primitive types: int, bool, real, char, string, etc. \\
+
+Constructed types: functions ($->$), tuples (cartesion product) (*) \\
+
+E.g. (3, true); gives you val it = (3,true):int*bool \\
+
+(4, ($\#$"a", "hello")); gives you val it (4, ($\#$"a", "hello")):int * (char * string) \\
+
+Pair and pair accessing
+\begin{verbatim}
+val x = (4,3);
+-val x = (4,3) : int * int
+#1 x;
+- val it = 4:int
+#2 x;
+- val it = 3:int
+\end{verbatim}
+
+lists - homogeneous \\
+
+e.g. [1,2,3]; gives you val it = [1,2,3]:int list \\
+
+empty list: nil or [] \\
+
+"cons" - ::, infix, right-associative\\
+
+[1,2,3] $\equiv$ 1::2::3::nil \\
+
+hd, tl - head and tail of a list ("car", "cdr") \\
+
+functions: all functions in ML take exactly one parameter \\
+
+How do we pass multiple parameters? \\
+
+Solution 1: Pass a tuple
+\begin{verbatim}
+fun add (x:int * int) = #1 x + #2 x;
+- val add = fn: int * int -> int
+val x = (3,4); (or add(3,4))
+add x;
+- val it = 7: int
+\end{verbatim}
+
+Solution 2 - "$\lambda$-calculus approach" 
+\begin{verbatim}
+val add = fn(x:int) => fn(yLint) => x + y;
+- val add = fn:int -> int -> int
+add 3 4;
+- val it = 7 : int
+\end{verbatim}
+
+- curried - permists partial application
+\begin{verbatim}
+val plus3 = add 3;
+plus3 4;
+- val it = 7: int
+plus3 10;
+- val it = 13: int
+\end{verbatim}
+
+Shorthand: for solutions 1
+\begin{verbatim}
+fun add(x:int, y:int) = x + y;
+- val add = fn: int * int -> int
+\end{verbatim}
+
+Solution 2
+\begin{verbatim}
+fun add(x:int)(y:int) = x + y
+\end{verbatim}
+
+What if a function takes no parameters?  \\
+
+- degenerate type unit - only value is ()
+
+\begin{verbatim}
+fun f(x:unit) = 5;
+- val f = fn: unit->int
+f();
+- val it = 5:int
+\end{verbatim}
+
+Shorthand: fun f() = 5 \\
+
+() pattern matches type unit. \\
+
+\subsection{What kinds of programs can we write in System F?}
+
+Which of our untyped constructions are actually typable? \\
+
+Booleans: $\lambda x.\lambda y.x$ is $\land \alpha. \lambda x:\alpha.\lambda y: \alpha.x$, which is $\forall \alpha.\alpha \rightarrow \alpha$ \\
+
+$\lambda x.\lambda y.x$ is $\land \alpha. \lambda x:\alpha.\lambda y: \alpha.y$, which is $\forall \alpha.\alpha \rightarrow \alpha$ \\
+
+Let $[[Bool]] = \forall \alpha.\alpha \rightarrow \alpha \rightarrow \alpha$ \\
+
+Exercise: chekc that $[[not]]$ can be annotated to have type $[[Bool]] \rightarrow [[Bool]]$
 
 \end{document}
