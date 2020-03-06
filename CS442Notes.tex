@@ -1291,6 +1291,463 @@ Exercise: chekc that $[[not]]$ can be annotated to have type $[[Bool]] \rightarr
 
 \subsection{Mssing, approximately Chapter 4 and 5 of course notes}
 
+\section{Programming In The Large}
+
+Modules, Abstract Data Types - type + operations on that type \\
+
+Actions that threaten an ADT:
+\begin{itemize}
+	\item[1)] Tampering - accessing underlying details without using interface functions
+	\item[2)] Forgery - creating instances of the ADT without using a provided constructor (function that creates instances)
+\end{itemize}
+
+ADTs in ML - abstype - like datatype 
+\begin{verbatim}
+abstype rational = Rat of int * int
+with 
+	fum mkRat x y = Rat(x,y)
+	fun plus r1 r2 = ...
+	fun times r1 r2 = ...
+	fun gcd(x,y) = ...
+end
+\end{verbatim}
+
+Data constructor Rat hidden from users. \\
+
+$\therefore$ cannot create instances without a constructor - no forgery \\
+
+- only interface functions can see the data constructor \\
+
+- interface functions globally visible. \\
+
+Hide helper functions, e.g. gcd
+\begin{verbatim}
+local
+	fun gcd(x,y) = ...
+in 
+	fun plus x y = ...
+	fun times x y = ...
+end
+\end{verbatim}
+
+Now gcd is only visible to plus and times, while plus and times are globally visible. \\
+
+- can use local inside and outside of abstypes. \\
+
+\subsection{SML Module System}
+
+- structures, signatures and functors \\
+
+- structure: collection of values, functions, types, exceptions, - module \\
+
+\begin{verbatim}
+structure Rational =
+	struct
+		datatype rational = Rat of int * int
+		fun mkRat x y = Rat(x,y)
+		fun plus r1 r2 = ...
+		fun times r1 r2 = ...
+		fun gcd(x,y) = ...
+	end
+
+val x = Rational.Rat(3,4)
+\end{verbatim}
+
+signature 
+\begin{itemize}
+	\item[-] the "type" of a structure
+	\item[-] interface - many-to-many relationship with structures
+\end{itemize}
+
+\begin{verbatim}
+signature RATIONAL = 
+	sig
+		type rational
+		val mkRat: int*int -> rational
+		val plus: rational -> rational -> rational
+		val times: rational -> rational -> rational
+	end
+	
+structure RestrictedRational : RATIONAL = Rational
+\end{verbatim}
+
+- RestrictedRational.gcd is not visible. \\
+
+- implementation of type rational still visible
+
+Opaque structures: 
+\begin{verbatim}
+structure OpaqueRational :> RATIONAL = Rational
+\end{verbatim}
+
+opaque - equiv. to abstypes \\
+
+functor - high-level function: structures $\rightarrow$ structures. \\
+
+Ex.
+\begin{verbatim}
+signature COMPARABLE = 
+	sig
+		eqtype element 
+		val leq: element * element -> bool
+	end
+
+signature ORDEREDFIND = 
+	sig
+		eqtype element
+		val find : element list * element -> bool
+	end
+	
+functor MkOrderedFind(C:COMPARABLE): ORDEREDFIND = 
+	struct
+		type element = C.element
+		fun find ([], _) = false
+		|   find (x::xs, y) = if x = y then true else if C.leq(x,y) then find(xs,y) else false
+	end
+
+structure IntPair = struct
+	type element = int*int
+	fun leq((x1,y1), (x2,y2)) = x1 <= x2 or else (x1 = x2 andalso y1 <= y2)
+	end
+	
+structure IntPairFind = MkOrderedFind(IntPair)
+IntPairFind.find([(1,2), (3,4), (5,6)], (3,1)) 
+\end{verbatim}
+
+search will stop at (3,4) \\
+
+Sharing declarations - putting two or more modules together \\
+
+- sometimes the combination only "works" if certain types are forced to be equal. \\
+
+Eg. Modify OrderedFind to print out its findings instead of returning bool \\
+
+sig/struct for printable elements
+\begin{verbatim}
+signature PRINTABLE = sig
+	eqtype element
+	val toString: element -> string
+end
+
+functor MkOrderedPrintFind(structure C:COMPARABLE and P:PRINTABLE 
+sharing type C.element = P.element) = struct
+	type element = C.element
+	fun find([], _) = ()
+	|   find(x::xs, y) = if x = y then print(P.toString x ^ "\n")
+								  else if C.leq(x,y) then find(xs,y)
+								  else ()
+end
+
+structure PrintableIntPair = struct
+	type element = int * int
+	fun toString(m,n) = "(" ^ Int.toString m ^ "," ^ Int.toString n ^ ")"
+end
+
+structure IntPairPrintFind = MkOrderedPrintFind(structure C = IntPair and P = PrintableIntPair)
+
+IntpairPrintFind.find([(1,2), (3,4), (5,6)], (3,4)) 
+(3,4)
+val it = ():unit
+\end{verbatim}
+
+\section{Existential Types}
+
+$\forall \alpha. \tau$ - for any type $\tau'$ the item has type $\tau[\tau'/\alpha]$ - polymorphism \\
+
+What can be said of a type like $\exists \alpha. \tau$ ? \\
+
+- for some type $\tau'$, the item has type $\tau[\tau'/\alpha]$ \\
+
+- But we dont know what $\tau'$ is!
+
+E.g. consider the type $\exists \alpha.\alpha$ \\
+
+$x:\exists \alpha.\alpha \equiv $ for some type $\alpha$, x has type $\alpha$. \\
+
+Every typable term has type $\exists \alpha.\alpha$ \\
+
+- tells us nothing useful - how could we ever use such a term? \\
+
+But what if we combine existentials with record types? \\
+
+type Nat = $\exists \alpha. \{z:\alpha, s:\alpha \rightarrow \alpha, n:\alpha \rightarrow int\}$ \\
+
+\begin{verbatim}
+fun f(x: Nat) =
+	let(tau, {z,s,n}) = x  (* let tau be the unknown type alpha, z,s,n the fields of the record *)
+	in
+		n(s(s(s z)))
+	end
+\end{verbatim}
+
+can use x without ever knowing what $\alpha$ actually is. (since n at the end does the $\alpha \rightarrow int$ conversion)\\
+
+Existentials model {\bf Abstract Data Types} \\
+
+e.g.
+\begin{verbatim}
+abstype rat = Rat of int*int
+with
+	mkRat
+	plus
+	times
+	num
+	denom
+	gcd
+end
+
+Let x = (int*int, {mkRat = lambda x lambda y...., plus = lambda r1 lambda r2 ..., 
+times = ...., num = ..., denom = ..., gcd = ...}) :
+	exists alpha. {mkRat:int -> int -> alpha, plus: alpha -> alpha -> alpha,
+	 times: alpha -> alpha -> alpha. num: alpha->int, denom: alpha->int}
+
+Let
+	(tau, {mkRat, plus, times, num, denom}) = x
+	fun equal(a: tau, b: tau) = num a *denom b = denom a * num b
+in
+	equal(mkRat 1 2, mkRat 2 4)
+end
+\end{verbatim}
+
+- can be encoded as universals:
+
+$$\exists \alpha.\tau \rightarrow \forall \beta.(\forall \alpha.\tau \rightarrow \beta) \rightarrow \beta$$
+
+Let x = (int * Int, $\{$ mkRat, plus, times num, denom, gcd $\}$): $\exists \alpha .\{$ mkRat:int $\rightarrow$ int $\rightarrow \alpha$, ..., denom:$\alpha \rightarrow$ int $\}$ \\
+
+Encode x as \\
+
+Rat = $\wedge \beta \lambda f: \forall \alpha. \tau \rightarrow \beta . f\{int*int\} \{$ mkRat, plus, times, num, denom $\}$ \\
+
+e.g. $f = \wedge \alpha \lambda r: \{$ mkRat:$int \rightarrow int \rightarrow \alpha,$... $\}$. denom(plus (mkRat 1 2) (mkRat 1 3)) \\
+
+Rat $\{int\}$ f = 6 \\
+
+\section{Lazy Evaluation}
+
+- arguments substituted before they are evaluated \\
+
+- potential inefficiency - arg used more than once $=>$ eval more than once \\
+
+e.g. the midterm question with NOR and AOR reduction where NOR took way longer than AOR \\
+
+shceme + ML - eager \\
+
+Lazy evaluation in Scheme
+\begin{itemize}
+	\item[-] delay/force
+	\item[-] expr not evaluated
+	\item[-] returns a promise - suspended computation
+	\item[-] (delay $<expr>$)
+	\item[-] (force $<promise>$) 
+	\item[-] returns the value computed by the suspendded computation
+	\item[-] result is cached once its forced
+	\item[-] subsequent forces just return the cahced value
+	\item[-] avoids NOR inefficency - but side effects only evaluated once
+\end{itemize}
+
+OR - "thunking" - body of an abstraction is not reduced \\
+
+- delay computation by wrapping in an abstraction \\
+
+E.g. (define lazy-add (lambda (x y) (lambda () (+ x y)))) \\
+
+(define x (lazy-add 3 4)) - 3 and 4 have not yet been added \\
+
+(x) - this is where the addition happens, now we get 7 \\
+
+\subsection{Lazy Data Structures}
+
+Lazy eval $=>$ infinite data structures \\
+
+e.g infinite lists - "streams" (define ones (cons 1 (lambda ones))) \\
+
+\begin{verbatim}
+(define s-car car)
+(define s-cdr x) ((cdr x)))
+(s-car ones) => 1
+(s-car (s-cdr ones)) = 1 etc.
+(define make-seq (lambda (start)
+	(letrec
+		((next (lambda (n)
+				(cons n (lambda () (next (+ n 1))))))
+		(next start))))
+(define seq (make-seq 0))
+(s-car seq) => 0
+(s-car (s-cdr seq)) => 1
+(s-car (s-cdr (s-cdr seq))) => 2 etc.
+\end{verbatim}
+
+Exercise - do the same in ML (the assignment, one word hint fred) \\
+
+\subsection{A Lazy Language - Haskell}
+
+- statically typed, pure functional, lazy evaluation \\
+
+lex rules 
+\begin{itemize}
+	\item[-] case sensitive
+	\item[-] variables start with lowercase letters
+	\item[-] types and constructors start with uppercase letters
+\end{itemize}
+
+Offside rule:
+\begin{itemize}
+	\item[1)] All definitions begin in the same column
+	\item[2)] Multiline definitions - all lines after the 1st are indented
+\end{itemize}
+
+\begin{verbatim}
+add::Int -> Int -> Int
+add x y = 
+       x
+    +
+  y
+  
+OR
+
+add::Int -> Int -> Int
+add = \x -> \y -> x + y
+\end{verbatim}
+
+Types - primitive: Int, Float, Char, Bool \\
+
+- constructed: Int $->$ Bool (functions)
+
+[Int] (Lists) \\
+
+(Float, Char) (tuples) \\
+
+Polymorphism id::a $->$ a, id x = x (Pattern-matcing - like ML) \\
+
+Name-binding 
+\begin{verbatim}
+sumSquares::Int -> Int -> Int
+sumSquare a b = 
+   let
+      square x = x * x
+   in
+     square a + square b
+
+OR
+
+sumSquares::Int -> Int -> Int
+sumSquares a b =
+   square a + square b
+   where
+     square x = x * x
+\end{verbatim}
+
+Booleans: True, False, \&\&, $||$, not \\
+
+Comparisons: $==, /=, >, <, >=, <=$ \\
+
+Eg Three ways to write fact \\
+
+\begin{verbatim}
+Pattern-match: fact::Int->Int
+               fact 0 = 1
+               fact n = n * fact(n-1)
+
+If-then-else   fact::Int->Int
+               fact n = if n == 0 then 1 else n * fact(n-1)
+
+Guards:        fact::Int->Int
+               fact n
+                |   n == 0 = 1
+                |  otherwise = n * fact(n-1)
+\end{verbatim}
+
+Lists: [] = empty list \\
+
+: = cons
+
+\begin{verbatim}
+map::(a -> b) -> [a] -> [b]
+map _ [] = []
+map f (x:xs) = f x: map f xs
+\end{verbatim}
+
+++ list concatenation \\
+
+\subsection{List Comprehensions}
+
+\begin{verbatim}
+[x * x | x <- [1,2,3,4], x/= 2]
+=> [1,9,16]
+"{x^2 | x in {1,2,3,4}, x != 2}"
+[x * x + y * y | x <- [1,2,3] , y <- [2,3,4]]
+-> [5,10,17, 8, 13, 20, 13, 18,35] 
+
+qsort [] = []
+qsort(x:xs) = 
+   qsort [y | y <- xs, y < x]
+   ++ x:qsort[y | y <- xs, x <= y]
+\end{verbatim}
+
+\subsection{Creating Types}
+
+type - creates synonyms (like ML) \\
+
+type String = [Char] \\
+
+data is datatype in ML \\
+
+\begin{verbatim}
+data Tree a = Empty | Node (a, Tree a, Tree a)
+OR
+data Tree a = Empty | Node a (Tree a) (Tree a)
+
+inorder::Tree a -> [a]
+inorder Empty = []
+inorder (Node (a,b,c)) = inorder b ++ [a] ++ inorder c
+
+OR (using the 2nd definition (curried))
+
+inorder::Tree a -> [a]
+inorder Empty = []
+inorder (Node a b c) = inorder b ++ [a] ++ inorder c
+\end{verbatim}
+
+Lazy Evaluation \\
+
+- args not evaluated until they are used \\
+
+- args used more than once $=>$ eval occurs once, result is cached, returned on subsequent uses \\ 
+
+- "call-by-need" \\
+
+- data structures realized only as much as needed for computation to proceed \\
+
+$\therefore$ can express algorithms in terms of operations on large data structures \\
+
+E.g. $1^2 + 2^2 + \cdots + n^2$ \\
+
+Solution: 
+\begin{verbatim}
+predefined: sum [] = 0
+            sum (x:xs) = x + sum xs
+sumSquares::Int->int
+sumSquares n = sum (map square [1..n])
+
+sumSquares 4 = sum(map square [1..4])
+             = sum(map square 1:[2..4])
+             = sum(square 1: map square [2..4])
+             = square 1 + sum(map square [2..4])
+             = square 1 + sum(map sqaure 2:[3..4])
+             = square 1 + sum (square 2: map square [3..4])
+             = square 1 + square 2 + sum(map square [3..4])
+             ...
+\end{verbatim}
+
+Entire list is never constructed, no additional space overhead \\
+
+Direct support for infinite lists: [1..] \\
+
+ones = 1:ones \\
+
+
+
 
 
 \end{document}
